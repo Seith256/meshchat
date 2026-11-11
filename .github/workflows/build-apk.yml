@@ -25,55 +25,30 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Generate project skeleton
+      - name: Generate project skeleton and overlay code
         run: |
-          # Back up our custom files
           mkdir -p /tmp/custom
           cp -r lib /tmp/custom/lib
           cp pubspec.yaml /tmp/custom/pubspec.yaml
-
-          # Generate standard Flutter project in a temp dir
+          
           flutter create --org com.meshchat --project-name meshchat tmp_project
-
-          # Overlay our files
+          
           rm -rf tmp_project/lib
           cp -r /tmp/custom/lib tmp_project/lib
           cp /tmp/custom/pubspec.yaml tmp_project/pubspec.yaml
 
-          # Add Android permissions
-          MANIFEST=tmp_project/android/app/src/main/AndroidManifest.xml
-          python3 - <<'EOF'
-import re
-p = "tmp_project/android/app/src/main/AndroidManifest.xml"
-with open(p) as f: s = f.read()
-perms = """    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-"""
-s = s.replace("</manifest>", perms + "</manifest>")
-with open(p, "w") as f: f.write(s)
-EOF
-
-          # Ensure minSdk 21+
-          GRADLE=tmp_project/android/app/build.gradle
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' "$GRADLE" || true
-
-          # Move to build location
+      - name: Inject Android permissions
+        run: |
           cd tmp_project
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>\n    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle || true
 
-      - name: Get dependencies
-        run: flutter pub get
-        working-directory: tmp_project
-
-      - name: Build APK
-        run: flutter build apk --release --split-per-abi
-        working-directory: tmp_project
+      - name: Get dependencies and Build APK
+        run: |
+          cd tmp_project
+          flutter pub get
+          flutter build apk --release --split-per-abi
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
