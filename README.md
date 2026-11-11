@@ -1,0 +1,2 @@
+# meshchat
+Offline chatting app
