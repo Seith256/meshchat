@@ -41,7 +41,7 @@ class MeshChatApp extends StatelessWidget {
 
 // ================= MODELS =================
 class MeshUser {
-  final String id; final String name; final String? publicKey;
+  final String id; final String name; String? publicKey;
   int lastSeen; String? lastIp; int? lastPort;
   MeshUser({required this.id, required this.name, this.publicKey, this.lastSeen = 0, this.lastIp, this.lastPort});
   Map<String, dynamic> toJson() => {'id': id, 'name': name, 'pub': publicKey, 'lastSeen': lastSeen, 'ip': lastIp, 'port': lastPort};
@@ -168,7 +168,7 @@ class PeerDiscovery {
       final p = utf8.encode(jsonEncode({'tag': 'MESH_V1', 'id': id, 'name': name, 'port': port}));
       s.send(p, InternetAddress('255.255.255.255'), 48899);
       try {
-        final ip = await NetworkInfo().getWIFIIP();
+        final ip = await NetworkInfo().getWiFiIP();
         if (ip != null && ip.isNotEmpty) {
           final pts = ip.split('.');
           s.send(p, InternetAddress('${pts[0]}.${pts[1]}.${pts[2]}.255'), 48899);
